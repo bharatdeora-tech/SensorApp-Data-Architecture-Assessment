@@ -41,8 +41,9 @@ Provision all target environments before migrating production data.
 - Create telemetry indexes.
 
 ### MongoDB
-- Create audit database.
-- Create collections.
+
+- Create sensor_app database.
+- Create application_logs collection.
 - Configure compound indexes.
 - Configure TTL indexes.
 - Enable backup policies.
@@ -53,7 +54,7 @@ Historical migration is executed as an offline ETL process while the legacy appl
 
 | Legacy Source    | Target Database | Transformation                                                          |
 |------------------|-----------------|-------------------------------------------------------------------------|
-| Device Registry  | SQL Server      | Normalize attributes and configuration.                                 |
+| Device Registry  | SQL Server      | Normalize master data, configuration data, and reference data.                                 |
 | Sensor Telemetry | TimescaleDB     | Convert timestamps, remove redundant columns, standardize measurements. |
 | Audit Logs       | MongoDB         | Convert relational records into structured JSON documents.              |
 
@@ -103,6 +104,7 @@ Migration success is continuously verified using automated validation processes.
 - Foreign key verification
 - Timestamp consistency
 - Duplicate detection
+- Business key reconciliation
 
 ## Performance Validation
 Representative production workloads are monitored for:
@@ -115,10 +117,10 @@ Representative production workloads are monitored for:
 
 # Phase 4 : Incremental Cutover
 Instead of migrating the entire application simultaneously, workloads are redirected individually.
-1. Audit logging : MongoDB
-2. Telemetry ingestion : TimescaleDB
-3. Device management : SQL Server
-4. Historical reporting : TimescaleDB
+1. Audit logging → MongoDB
+2. Telemetry ingestion → TimescaleDB
+3. Historical reporting → TimescaleDB
+4. Device and configuration services → SQL Server
 5. Disable dual writes
 
 Each phase proceeds only after successful validation.
@@ -172,10 +174,13 @@ Migration is considered successful when:
 - Data validation reports no inconsistencies.
 - Transaction latency remains within SLA.
 - Telemetry ingestion operates without failures.
+- Telemetry retention and compression policies are active.
 - Production remains stable for seven consecutive days.
 - Legacy telemetry and audit tables have been archived.
 - Dual-write has been successfully removed.
 - Monitoring confirms stable production behaviour.
+- No critical Sev1/Sev2 incidents during stabilization period.
+
 ---
 
 # Post-Migration Monitoring
