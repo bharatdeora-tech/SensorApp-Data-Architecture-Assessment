@@ -1,86 +1,129 @@
 # Logical Data Model
 
 ## Purpose
-The Logical Data Model transforms the business concepts defined in the Conceptual Data Model into implementation-ready logical entities while remaining independent of any database technology.
-It establishes consistent entity definitions, business relationships, naming standards, ownership boundaries, and validation rules that are implemented across the proposed SensorApp architecture.
+
+The Logical Data Model transforms the business concepts defined in the Conceptual Data Model into implementation-ready logical entities while remaining independent of any specific database technology.
+
+It establishes entity definitions, relationships, business rules, ownership boundaries, and naming standards that guide the Physical Data Model.
+
 ---
 
 # Design Principles
-- Business capability driven
-- Technology independent
-- Domain-oriented design
-- Normalized master data
-- Consistent enterprise naming standards
-- Clear ownership boundaries
-- Future-ready and extensible
+
+- Business Capability Driven
+- Technology Independent
+- Domain-Oriented Design
+- Normalized Master Data
+- Consistent Enterprise Naming Standards
+- Clear Ownership Boundaries
+- Future-Ready and Extensible
+
 ---
 
 # Enterprise Naming Standard
-The logical model adopts descriptive business identifiers throughout the solution.
 
-| Standard                 | Example                                          |
-|--------------------------|--------------------------------------------------|
-| Entity Identifier        | device_identifier                                |
-| Configuration Identifier | configuration_identifier                         |
-| Reading Identifier       | reading_identifier                               |
-| Alert Identifier         | alert_identifier                                 |
-| Event Identifier         | event_identifier                                 |
-| Correlation Identifier   | correlation_identifier                           |
-| Time Attributes          | recorded_at, created_at, updated_at              |
-| Status Attributes        | device_status,configuration_status, alert_status |
+| Standard | Example |
+|----------|----------|
+| Entity Identifier | device_identifier |
+| Configuration Identifier | configuration_identifier |
+| Reading Identifier | reading_identifier |
+| Alert Identifier | alert_identifier |
+| Event Identifier | event_identifier |
+| Correlation Identifier | correlation_identifier |
+| Time Attributes | recorded_at, created_at, updated_at |
+| Status Attributes | device_status, configuration_status, alert_status |
+
 ---
 
 # Business Domains
 
-| Domain                   | Responsibility                                  |
-|--------------------------|-------------------------------------------------|
-| Device Management        | Registration and lifecycle of sensor devices    |
-| Configuration Management | Device configuration and operational thresholds |
-| Telemetry Management     | Sensor measurements and historical telemetry    |
-| Alert Management         | Threshold evaluation and alert lifecycle        |
-| Audit Management         | Operational logging and traceability            |
+| Domain | Responsibility |
+|----------|----------|
+| Device Management | Registration and lifecycle management of devices |
+| Location Management | Physical deployment and location management |
+| Configuration Management | Device configuration and threshold management |
+| Telemetry Management | Sensor measurements and historical telemetry |
+| Alert Management | Alert lifecycle and exception handling |
+| Audit Management | Operational logging and traceability |
+
 ---
 
 # Logical Entity Overview
 
 ```text
-                         Device
-                            │
-          ┌─────────────────┼─────────────────┐
-          ▼                 ▼                 ▼
- Configuration      Sensor Reading        Alert
-          │                 │                 │
-          └─────────────────┴─────────────────┘
-                            │
-                            ▼
-                      Audit Event
+                  Location
+                      │
+                      ▼
+                   Device
+                      │
+       ┌──────────────┼──────────────┐
+       ▼              ▼              ▼
+Configuration   Sensor Reading     Alert
+                                       │
+                                       ▼
+                                 Audit Event
+
+Reference Data
+   │
+   ├── Sensor Types
+   ├── Device Statuses
+   ├── Alert Types
+   ├── Alert Severities
+   └── Alert Statuses
 ```
+
 ---
 
 # Logical Entity Catalogue
-## Device
-Represents a registered physical sensor within the platform.
+
+## Location
+
+Represents the physical deployment location of devices.
 
 **Primary Attributes**
+
+- location_identifier
+- location_code
+- building_name
+- room_name
+
+**Business Rules**
+
+- A Location may contain multiple Devices.
+- A Location is managed independently of Device lifecycle.
+
+---
+
+## Device
+
+Represents a registered sensor device.
+
+**Primary Attributes**
+
 - device_identifier
 - device_code
 - device_name
-- sensor_type
+- sensor_type_identifier
+- location_identifier
 - device_status
-- location_name
 - registered_at
 
-Business Rules
+**Business Rules**
+
 - A Device is uniquely identified by device_identifier.
-- A Device may own multiple configurations.
-- A Device may generate many sensor readings.
-- A Device may generate many alerts.
+- A Device belongs to a Location.
+- A Device may own multiple Configurations.
+- A Device may generate many Sensor Readings.
+- A Device may generate many Alerts.
+
 ---
 
 ## Configuration
+
 Represents operational settings assigned to a Device.
 
 **Primary Attributes**
+
 - configuration_identifier
 - device_identifier
 - reporting_interval
@@ -89,33 +132,41 @@ Represents operational settings assigned to a Device.
 - effective_from
 - effective_to
 
-Business Rules
+**Business Rules**
+
 - Each Configuration belongs to exactly one Device.
-- Only one active configuration exists per Device.
+- Only one active Configuration exists per Device.
+
 ---
 
 ## Sensor Reading
-Represents a telemetry measurement received from a Device.
+
+Represents telemetry generated by a Device.
 
 **Primary Attributes**
+
 - reading_identifier
 - device_identifier
-- recorded_at
-- temperature
-- humidity
-- pressure
+- sensor_type
+- measured_value
+- measurement_unit
 - quality_status
+- recorded_at
 
-Business Rules
+**Business Rules**
+
 - Sensor Readings are immutable.
 - Every reading belongs to one Device.
-- Readings may trigger alerts.
+- Readings may trigger Alerts.
+
 ---
 
 ## Alert
-Represents a business event generated from telemetry evaluation.
+
+Represents an operational exception generated from telemetry evaluation.
 
 **Primary Attributes**
+
 - alert_identifier
 - device_identifier
 - alert_type
@@ -123,15 +174,20 @@ Represents a business event generated from telemetry evaluation.
 - alert_status
 - triggered_at
 
-Business Rules
+**Business Rules**
+
 - Alerts are generated by business rules.
 - Alerts remain associated with their originating Device.
+- Alerts may generate Audit Events.
+
 ---
 
 ## Audit Event
+
 Represents immutable operational and application events.
 
 **Primary Attributes**
+
 - event_identifier
 - correlation_identifier
 - device_identifier
@@ -139,41 +195,57 @@ Represents immutable operational and application events.
 - created_at
 - payload
 
-Business Rules
+**Business Rules**
+
 - Audit Events are append-only.
 - Correlation identifiers support end-to-end tracing.
+- Audit Events do not modify transactional data.
+
 ---
 
 # Logical Relationships
-| Parent Entity | Relationship | Child Entity   |
-|---------------|--------------|----------------|
-| Device        | 1 : N        | Configuration  |
-| Device        | 1 : N        | Sensor Reading |
-| Device        | 1 : N        | Alert          |
-| Alert         | 1 : N        | Audit Event    |
+
+| Parent Entity | Relationship | Child Entity |
+|----------|----------|----------|
+| Location | 1 : N | Device |
+| Device | 1 : N | Configuration |
+| Device | 1 : N | Sensor Reading |
+| Device | 1 : N | Alert |
+| Alert | 1 : N | Audit Event |
+
 ---
 
 # Cross-Domain Business Rules
+
 - A Device must exist before telemetry is accepted.
+- A Device must belong to a valid Location.
 - Configuration governs telemetry validation.
 - Sensor Readings may generate Alerts.
-- Alerts produce Audit Events.
+- Alerts generate Audit Events.
 - Audit Events never modify transactional data.
+- Reference Data standardizes business classifications.
+
 ---
 
 # Domain Ownership
-| Logical Domain | Business Owner           |
-|----------------|--------------------------|
-| Device         | Device Management        |
-| Configuration  | Configuration Management |
-| Telemetry      | Telemetry Management     |
-| Alert          | Alert Management         |
-| Audit          | Audit Management         |
+
+| Domain | Business Owner |
+|----------|----------|
+| Device | Device Management |
+| Location | Device Management |
+| Configuration | Configuration Management |
+| Telemetry | Telemetry Management |
+| Alert | Alert Management |
+| Audit | Audit Management |
+
 ---
 
-# Transition to Physical Data Model
-The Physical Data Model maps these logical entities to SQL Server, TimescaleDB, and MongoDB while preserving the business semantics, relationships, and naming standards defined here.
+# Transition To Physical Data Model
+
+The Physical Data Model maps these logical entities to SQL Server, TimescaleDB, and MongoDB while preserving the business semantics, ownership boundaries, relationships, and naming conventions defined here.
+
 ---
 
 # Conclusion
-The Logical Data Model provides a consistent enterprise blueprint for implementing the SensorApp solution. By standardizing business terminology, logical relationships, and identifier naming, it enables a scalable, maintainable, and technology-independent architecture while providing a seamless transition to the Physical Data Model.
+
+The Logical Data Model provides a consistent business blueprint for implementing the SensorApp architecture. It standardizes terminology, relationships, ownership boundaries, and business rules while providing a clear transition from conceptual design to physical implementation.
