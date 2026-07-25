@@ -59,10 +59,12 @@ must repeatedly scan large relational tables that were not designed for time-ser
 # Proposed Performance Strategy
 ## SQL Server
 ### Responsibilities
-- Device
-- Configuration
-- Alert metadata
-- Transactional operations
+
+- Device Management
+- Configuration Management
+- Alert Management
+- Reference Data
+- Transactional Operations
 
 ### Optimization Strategy
 - Clustered Primary Keys
@@ -103,11 +105,12 @@ Example analytical query:
 
 ```sql
 SELECT
-    device_id,
-    AVG(temperature)
-FROM sensor_readings
-WHERE recorded_at >= NOW() - INTERVAL '24 HOURS'
-GROUP BY device_id;
+    device_identifier,
+    AVG(measured_value)
+FROM telemetry.sensor_readings
+WHERE sensor_type = 'TEMPERATURE'
+  AND recorded_at >= NOW() - INTERVAL '24 HOURS'
+GROUP BY device_identifier;
 ```
 
 The query benefits from:
@@ -125,8 +128,11 @@ instead of scanning the complete telemetry history.
 - Operational events
 
 ### Optimization Strategy
-- Append-only documents
-- Compound indexes on timestamp and severity
+
+- Append-only document storage
+- Compound indexes for correlation tracing
+- Device-based investigation indexes
+- Event type and severity indexes
 - TTL indexes for automatic retention
 - Flexible schema for evolving event structures
 
@@ -163,9 +169,7 @@ Transactional latency remains stable because telemetry writes no longer compete 
 ## Historical Analytics
 Representative query:
 
-```sql
-Average temperature for the last 30 days.
-```
+Average measured value by sensor type for the last 30 days.
 
 Validation:
 
@@ -238,6 +242,7 @@ Compared to the legacy implementation, the proposed architecture provides:
 - Lower backup duration
 - Better storage efficiency
 - Improved long-term maintainability
+- Retention policy enforcement through platform-native lifecycle management
 ---
 
 # Conclusion
