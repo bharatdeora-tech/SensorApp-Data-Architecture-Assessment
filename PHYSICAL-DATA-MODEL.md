@@ -112,7 +112,6 @@ configuration.*         Continuous           application_logs
 alert.*                 Aggregates           TTL Indexes
 asset.*                 Compression          JSON Documents
 configuration.*
-alert.*
 ```
 ---
 
