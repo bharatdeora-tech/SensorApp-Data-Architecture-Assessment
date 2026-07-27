@@ -195,13 +195,6 @@ SensorApp-Data-Architecture-Assessment/
 ├── mongodb-ddl.js
 └── diagrams/
 ```
-
----
-
-# Architecture Diagram
-
-[https://excalidraw.com/#json=OsvvvImD9oLMCj7QkTzN4,_ig4TOL4CysSU-3jz8BIcg
-](https://excalidraw.com/#json=pEu0ItS_TCAO197virSR3,YqecibeiDxb-_XiFcm0-ww)
 ---
 
 # Assumptions
