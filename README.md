@@ -192,8 +192,7 @@ SensorApp-Data-Architecture-Assessment/
 ├── SAMPLE-QUERIES.md
 ├── sqlserver-ddl.sql
 ├── timescaledb-ddl.sql
-├── mongodb-ddl.js
-└── diagrams/
+└── mongodb-ddl.js
 ```
 ---
 
