@@ -10,7 +10,7 @@ The modernized architecture introduces purpose-built data stores:
 | Sensor Telemetry  | TimescaleDB |
 | Audit Logs        | MongoDB     |
 
-Each database is optimized for its workload, allowing independent scaling, improved query performance, and lower operational overhead.
+###Each database is optimized for its workload, allowing independent scaling, improved query performance, and lower operational overhead.
 ---
 
 # Current Performance Challenges
@@ -42,8 +42,7 @@ This increases:
 - Storage requirements
 - Backup size
 - Index maintenance
-
-while providing little transactional value.
+  while providing little transactional value.
 ---
 
 ## Historical Analytics
@@ -153,7 +152,7 @@ Measure:
 - CPU utilization
 
 Expected observation:
-TimescaleDB maintains consistent ingestion throughput as telemetry volume increases because writes are distributed across time-based chunks.
+####TimescaleDB maintains consistent ingestion throughput as telemetry volume increases because writes are distributed across time-based chunks.
 ---
 
 ## Transaction Response Time
@@ -163,7 +162,7 @@ Measure:
 - Alert creation
 
 Expected observation:
-Transactional latency remains stable because telemetry writes no longer compete with OLTP operations.
+###Transactional latency remains stable because telemetry writes no longer compete with OLTP operations.
 ---
 
 ## Historical Analytics
@@ -178,7 +177,7 @@ Validation:
 - Logical Reads
 
 Expected observation:
-Queries access only relevant chunks instead of scanning the entire dataset.
+###Queries access only relevant chunks instead of scanning the entire dataset.
 ---
 
 ## Audit Log Retrieval
@@ -195,7 +194,7 @@ Validation:
 - Documents examined
 
 Expected observation:
-MongoDB performs indexed document retrieval without impacting transactional workloads.
+###MongoDB performs indexed document retrieval without impacting transactional workloads.
 ---
 
 # Execution Plan Validation
@@ -229,7 +228,7 @@ The proposed architecture is designed to scale independently.
 | TimescaleDB | Horizontal expansion and chunk management |
 | MongoDB     | Replica Sets and Sharding (future)        |
 
-This allows each workload to grow without affecting the others.
+###This allows each workload to grow without affecting the others.
 ---
 
 # Expected Benefits
