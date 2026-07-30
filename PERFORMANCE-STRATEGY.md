@@ -3,6 +3,7 @@
 The objective of the proposed architecture is to improve scalability and query performance by separating workloads according to their access patterns instead of storing every data type in a single relational database.
 The legacy application uses SQL Server for transactional data, high-volume telemetry, and audit logging. While this design is simple, it causes resource contention as data volume increases.
 The modernized architecture introduces purpose-built data stores:
+Each database is optimized for its workload, allowing independent scaling, improved query performance, and lower operational overhead.
 
 | Workload          | Database    |
 |-------------------|-------------|
@@ -10,7 +11,6 @@ The modernized architecture introduces purpose-built data stores:
 | Sensor Telemetry  | TimescaleDB |
 | Audit Logs        | MongoDB     |
 
-Each database is optimized for its workload, allowing independent scaling, improved query performance, and lower operational overhead.
 ---
 
 # Current Performance Challenges
@@ -216,6 +216,7 @@ After:
 
 # Scalability Considerations
 The proposed architecture is designed to scale independently.
+-This allows each workload to grow without affecting the others.
 
 | Component   | Scaling Strategy                          |
 |-------------|-------------------------------------------|
@@ -223,7 +224,7 @@ The proposed architecture is designed to scale independently.
 | TimescaleDB | Horizontal expansion and chunk management |
 | MongoDB     | Replica Sets and Sharding (future)        |
 
-This allows each workload to grow without affecting the others.
+
 ---
 
 # Expected Benefits
