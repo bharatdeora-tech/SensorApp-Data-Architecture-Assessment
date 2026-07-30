@@ -66,6 +66,18 @@ Examples
 ---
 
 ## Database Objects
+
+| Object | Convention |
+|----------|----------|
+| Primary Key | PK_<schema>_<table> |
+| Foreign Key | FK_<child>_<parent> |
+| Unique Constraint | UQ_<table>_<column> |
+| Check Constraint | CK_<table>_<column> |
+| Default Constraint | DF_<table>_<column> |
+| Index | IX_<table>_<columns> |
+
+---
+
 # Platform Responsibilities
 Each database platform owns a clearly defined business capability.
 
@@ -109,279 +121,289 @@ This separation prevents competing workloads from affecting overall application 
 ## Purpose
 
 SQL Server remains the authoritative transactional platform for the SensorApp ecosystem. It manages business entities requiring strong consistency, referential integrity, transactional guarantees, and predictable relational query performance.
-Unlike telemetry and logging workloads, master data changes relatively infrequently but require strict validation and ACID compliance.
-SQL Server therefore serves as the enterprise **System of Record**.
+
+Unlike telemetry and logging workloads, master data changes relatively infrequently but require strict validation and ACID compliance. SQL Server therefore serves as the enterprise **System of Record**.
+
 ---
 
-# SQL Server Database Organization
+## SQL Server Database Organization
 
 Rather than placing every object inside the default `dbo` schema, business domains are separated into dedicated schemas.
 
 | Schema | Responsibility |
 |----------|----------|
-| asset | Device master data and lifecycle management |
+| asset | Device and Location master data |
 | configuration | Device operating parameters and configuration history |
 | alert | Alert lifecycle management |
 
 This structure improves maintainability, simplifies security management, and establishes clear ownership boundaries.
+
 ---
+## asset.locations
 
-# Primary Entity — asset.devices
+Stores physical locations where devices are deployed.
 
-The `asset.devices` table stores the master definition of every registered sensor device.
+### Physical Structure
 
-## Columns
+| Column | Data Type | Constraint | Description |
+|----------|----------|----------|----------|
+| location_identifier | UNIQUEIDENTIFIER | Primary Key | Unique location identifier |
+| location_name | NVARCHAR(100) | NOT NULL | Location name |
+| building | NVARCHAR(100) | NOT NULL | Building name |
+| floor | NVARCHAR(50) | NULL | Floor designation |
+| room | NVARCHAR(100) | NULL | Room designation |
+| created_at | DATETIME2 | NOT NULL | Creation timestamp |
+| updated_at | DATETIME2 | NULL | Last modification timestamp |
 
-| Column | Description |
+### Constraints
+
+**Primary Key**
+
+```text
+PK_asset_locations
+```
+
+### Index Strategy
+
+| Index | Purpose |
 |----------|----------|
-| device_identifier | Unique device identifier |
-| device_code | Human-readable unique device code |
-| device_name | Display name |
-| sensor_type | Sensor classification |
-| manufacturer | Device manufacturer |
-| model_number | Device model |
-| serial_number | Manufacturer serial number |
-| building | Building location |
-| room | Room location |
-| device_status | Operational status |
-| registered_at | Registration timestamp |
-| created_at | Audit timestamp |
-| updated_at | Last modification timestamp |
+| PK_asset_locations | Clustered Primary Key |
+| IX_asset_locations_building | Building searches |
+| IX_asset_locations_room | Room searches |
 
----
+### Relationship
 
-## Constraints
-Primary Key:
-
-```
-PK_asset_devices
+```text
+asset.locations
+       │
+       └────── 1:N ──────► asset.devices
 ```
 
-Unique Constraint:
+### Business Rules
 
-```
-UQ_asset_devices_device_code
-```
-
-Check Constraints:
-- Device status validation
-- Sensor type validation
----
-
-## Index Strategy
-
-| Index                        | Purpose                |
-|------------------------------|------------------------|
-| PK_asset_devices             | Clustered primary key  |
-| UQ_asset_devices_device_code | Fast business lookups  |
-| IX_asset_devices_status      | Active device searches |
-| IX_asset_devices_building | Building-based searches |
-
-This indexing strategy supports the most common application access patterns while minimizing write overhead.
-
-# SQL Server Physical Implementation
-## Core Physical Entities
-The SQL Server database stores business-critical transactional entities that require strong consistency, relational integrity, and ACID-compliant transactions.
----
+- One Location may contain multiple Devices.
+- A Device must belong to exactly one Location.
+- Locations are managed independently of devices.
 
 ## asset.devices
+
 The `asset.devices` table is the authoritative source for all registered sensor devices.
 
 ### Physical Structure
 
 | Column | Data Type | Constraint | Description |
-|-------------------|-----------|------------|-------------|
+|----------|----------|----------|----------|
 | device_identifier | UNIQUEIDENTIFIER | Primary Key | Unique identifier for the device |
-| device_code       | NVARCHAR(50) | UNIQUE | Human-readable device code |
-| device_name       | NVARCHAR(150) | NOT NULL | Display name |
-| sensor_type       | NVARCHAR(50) | NOT NULL | Device classification |
-| device_status     | NVARCHAR(20) | NOT NULL | Operational state |
-| building | NVARCHAR(100) | NOT NULL | Building location |
-| room | NVARCHAR(100) | NULL | Room location |
-| registered_at     | DATETIME2        | NOT NULL | Registration timestamp |
-| created_at        | DATETIME2        | NOT NULL | Audit timestamp |
-| updated_at        | DATETIME2        | NULL | Last modification timestamp |
+| device_code | NVARCHAR(50) | UNIQUE | Human-readable device code |
+| device_name | NVARCHAR(150) | NOT NULL | Display name |
+| sensor_type | NVARCHAR(50) | NOT NULL | Device classification |
+| manufacturer | NVARCHAR(100) | NULL | Device manufacturer |
+| model_number | NVARCHAR(100) | NULL | Device model |
+| serial_number | NVARCHAR(100) | NULL | Manufacturer serial number |
+| location_identifier | UNIQUEIDENTIFIER | Foreign Key | Reference to device location |
+| device_status | NVARCHAR(20) | NOT NULL | Operational state |
+| registered_at | DATETIME2 | NOT NULL | Registration timestamp |
+| created_at | DATETIME2 | NOT NULL | Audit timestamp |
+| updated_at | DATETIME2 | NULL | Last modification timestamp |
 
 ### Constraints
-Primary Key:
 
-```
+**Primary Key**
+
+```text
 PK_asset_devices
 ```
 
-Unique Constraint:
+**Unique Constraint**
 
-```
+```text
 UQ_asset_devices_device_code
 ```
 
-Check Constraints:
+**Check Constraint**
 
-```
+```text
 CK_asset_devices_status
 ```
 
-Allowed Values
+Allowed Values:
+
 - Active
 - Inactive
 - Maintenance
 - Retired
----
 
 ### Index Strategy
 
-| Index                        | Purpose               |
-|------------------------------|-----------------------|
-| PK_asset_devices             | Clustered Primary Key |
-| UQ_asset_devices_device_code | Fast device lookup    |
-| IX_asset_devices_status      | Dashboard filtering   |
-| IX_asset_devices_location    | Location searches     |
+| Index | Purpose |
+|----------|----------|
+| PK_asset_devices | Clustered Primary Key |
+| UQ_asset_devices_device_code | Fast device lookup |
+| IX_asset_devices_status | Dashboard filtering |
+| IX_asset_devices_location | Location lookups |
+
+This indexing strategy supports the most common application access patterns while minimizing write overhead.
+
 ---
 
 ## configuration.device_configurations
+
 Stores active and historical operating parameters for each device.
 
 ### Physical Structure
 
-| Column                   | Data Type         | Constraint |
-|--------------------------|------------------|-------------|
+| Column | Data Type | Constraint |
+|----------|----------|----------|
 | configuration_identifier | UNIQUEIDENTIFIER | Primary Key |
-| device_identifier        | UNIQUEIDENTIFIER | Foreign Key |
-| reporting_interval       | INT              | NOT NULL    |
-| threshold_value          | DECIMAL(10,2)    | NOT NULL    |
-| configuration_status     | NVARCHAR(20)     | NOT NULL    |
-| effective_from           | DATETIME2        | NOT NULL    |
-| effective_to             | DATETIME2        | NULL        |
-| created_at               | DATETIME2        | NOT NULL    |
+| device_identifier | UNIQUEIDENTIFIER | Foreign Key |
+| reporting_interval | INT | NOT NULL |
+| threshold_value | DECIMAL(10,2) | NOT NULL |
+| configuration_status | NVARCHAR(20) | NOT NULL |
+| effective_from | DATETIME2 | NOT NULL |
+| effective_to | DATETIME2 | NULL |
+| created_at | DATETIME2 | NOT NULL |
 
 ### Foreign Key
-```
+
+```text
 FK_configuration_device
 ```
 
-```
+Relationship:
+
+```text
 configuration.device_configurations
+                │
+                ▼
 asset.devices
 ```
 
 ### Business Rules
-- One Device may have multiple historical configurations.
+
+- A Device may have multiple historical configurations.
 - Only one active configuration is permitted.
 - Historical configurations are retained for audit purposes.
----
 
 ### Index Strategy
 
-| Index                    | Purpose                         |
-|--------------------------|---------------------------------|
-| PK_device_configurations | Clustered Primary Key           |
-| IX_configuration_device  | Device lookups                  |
-| IX_configuration_active  | Current configuration retrieval |
+| Index | Purpose |
+|----------|----------|
+| PK_device_configurations | Clustered Primary Key |
+| IX_configuration_device | Device lookups |
+| IX_configuration_active | Current configuration retrieval |
+
 ---
 
 ## alert.alerts
+
 Stores operational alerts generated from telemetry evaluation.
 
 ### Physical Structure
 
-| Column            | Data Type        |
-|-------------------|------------------|
-| alert_identifier  | UNIQUEIDENTIFIER |
+| Column | Data Type |
+|----------|----------|
+| alert_identifier | UNIQUEIDENTIFIER |
 | device_identifier | UNIQUEIDENTIFIER |
-| alert_type        | NVARCHAR(50)     |
-| alert_severity    | NVARCHAR(20)     |
-| alert_status      | NVARCHAR(20)     |
-| triggered_at      | DATETIME2        |
-| acknowledged_at   | DATETIME2        |
-| resolved_at       | DATETIME2        |
+| alert_type | NVARCHAR(50) |
+| alert_severity | NVARCHAR(20) |
+| alert_status | NVARCHAR(20) |
+| triggered_at | DATETIME2 |
+| acknowledged_at | DATETIME2 |
+| resolved_at | DATETIME2 |
 
-### Relationships
-```
-asset.devices
-      │
-      └───────────────┐
-                      │
-                      ▼
-               alert.alerts
-```
-
-### Business Rules
-- Every Alert references a valid Device.
-- Alerts cannot exist independently.
-- Alert history is retained for compliance and reporting.
----
-
-### Index Strategy
-| Index              | Purpose             |
-|--------------------|---------------------|
-| PK_alerts          | Primary Key         |
-| IX_alert_status    | Dashboard queries   |
-| IX_alert_device    | Device history      |
-| IX_alert_triggered | Time-range searches |
----
-
-# Referential Integrity
-SQL Server enforces relational consistency using foreign key constraints.
+### Relationship
 
 ```text
 asset.devices
       │
-      ├───────────────┐
-      ▼               ▼
-configuration     alert
+      └────── 1:N ──────► alert.alerts
 ```
 
-Relationships
+### Business Rules
 
-| Parent  | Child         | Cardinality |
-|---------|---------------|-------------|
-| Device  | Configuration | 1 : N       |
-| Device  | Alert         | 1 : N       |
+- Every Alert references a valid Device.
+- Alerts cannot exist independently.
+- Alert history is retained for compliance and reporting.
+
+### Index Strategy
+
+| Index | Purpose |
+|----------|----------|
+| PK_alerts | Primary Key |
+| IX_alert_status | Dashboard queries |
+| IX_alert_device | Device history |
+| IX_alert_triggered | Time-range searches |
+
+---
+
+## Referential Integrity
+
+SQL Server enforces relational consistency using foreign key constraints.
+
+| Parent | Child | Cardinality |
+|----------|----------|----------|
+| Location | Device | 1:N |
+| Device | Configuration | 1:N |
+| Device | Alert | 1:N |
 
 Referential integrity prevents orphaned records and guarantees transactional consistency.
+
 ---
 
-# Data Validation
+## Data Validation
+
 Validation is enforced as close to the data as possible.
 
-| Validation              | Implementation       |
-|-------------------------|----------------------|
-| Required Attributes     | NOT NULL constraints |
-| Device Code Uniqueness  | UNIQUE constraint    |
-| Status Validation       | CHECK constraints    |
-| Configuration Ownership | Foreign Key          |
-| Default Values          | DEFAULT constraints  |
+| Validation | Implementation |
+|----------|----------|
+| Required Attributes | NOT NULL constraints |
+| Device Code Uniqueness | UNIQUE constraint |
+| Status Validation | CHECK constraints |
+| Configuration Ownership | Foreign Key |
+| Default Values | DEFAULT constraints |
+
 ---
 
-# Storage Optimization
+## Storage Optimization
+
 Although SQL Server stores only transactional data, physical optimization remains important.
 
 ### Row Storage
+
 - Narrow transactional rows
 - Explicit data types
 - No redundant columns
 - Avoid variable-length columns where unnecessary
 
 ### Index Maintenance
+
 Recommended maintenance includes:
+
 - Periodic index rebuild/reorganize
 - Statistics updates
 - Fragmentation monitoring
 - Query plan review
+
 ---
 
-# Transaction Management
+## Transaction Management
+
 SQL Server remains the only platform responsible for transactional consistency.
+
 Typical transactions include:
+
 - Device Registration
 - Configuration Updates
 - Alert Lifecycle Management
 
 All operations execute within ACID-compliant transactions to ensure consistency and durability.
+
 ---
 
-# Physical Design Summary
+## Physical Design Summary
+
 The SQL Server implementation provides:
+
 - Strong referential integrity
 - ACID transaction support
 - Optimized indexing
@@ -398,11 +420,11 @@ TimescaleDB is the dedicated platform for storing and analyzing high-volume sens
 By isolating telemetry from transactional workloads, the platform eliminates contention on SQL Server while enabling independent scalability for IoT data ingestion.
 ---
 
-# telemetry.sensor_readings
+## telemetry.sensor_readings
 
 The `telemetry.sensor_readings` hypertable stores immutable sensor measurements generated by registered devices.
 
-## Physical Structure
+### Physical Structure
 
 | Column | Data Type | Constraint | Description |
 |----------|----------|----------|----------|
@@ -437,7 +459,7 @@ This strategy enables efficient chunk pruning during time-range queries and sign
 
 | Index | Purpose |
 |----------|----------|
-| PK_sensor_readings | Primary Key |
+| PK_sensor_readings | Composite Key (device_identifier, recorded_at) |
 | IX_sensor_readings_device_time | Latest telemetry retrieval |
 | IX_sensor_readings_sensor | Sensor analytics and trend analysis |
 
@@ -503,10 +525,10 @@ MongoDB stores operational events, application diagnostics, audit records, and e
 Unlike transactional data, operational logs are append-only, semi-structured, and frequently evolve over time. MongoDB's flexible document model allows new event types to be introduced without requiring schema migrations.
 ---
 
-# application_logs
+## application_logs
 The `application_logs` collection stores immutable operational events generated by the application.
 
-## Document Structure
+### Document Structure
 
 | Field | Type | Description |
 |----------|----------|----------|
@@ -543,10 +565,8 @@ The `application_logs` collection stores immutable operational events generated 
 ---
 
 ## Collection Index Strategy
-| Index                          | Purpose               |
-|--------------------------------|-----------------------|
-| IX_logs_event_identifier       | Event lookup          |
-| IX_logs_correlation_identifier | Distributed tracing   |
+| Index | Purpose |
+|--------|---------|
 | IX_logs_event_identifier | Event lookup |
 | IX_logs_correlation_identifier | Distributed tracing |
 | IX_logs_device_timestamp | Device history |
@@ -599,18 +619,19 @@ This design supports high write throughput while maintaining fast diagnostic que
 Although each platform stores different workloads, they remain logically connected through shared business identifiers.
 
 ```text
-                  SQL Server
-             asset.devices
-                    │
-         device_identifier
-                    │
-        ┌───────────┴───────────┐
-        ▼                       ▼
- TimescaleDB              MongoDB
-sensor_readings       application_logs
+                 SQL Server
+              asset.devices
+                     │
+             device_identifier
+                     │
+      ┌──────────────┴──────────────┐
+      ▼                             ▼
+
+telemetry.sensor_readings    application_logs
+      TimescaleDB                 MongoDB
 ```
 
-The application enforces these logical relationships through the Repository Layer, ensuring that all telemetry and audit events reference valid registered devices.
+The Business Service Layer and Repository Layer jointly enforce cross-platform relationships by validating device existence in SQL Server before telemetry data or audit events are persisted. This ensures that all telemetry and audit records reference valid registered devices while preserving workload isolation across platforms.
 ---
 
 # Physical Design Summary
@@ -818,10 +839,12 @@ Each database platform scales independently according to workload characteristic
 - Query optimization
 
 ### TimescaleDB
-- Increased storage capacity
-- Additional compute resources
+
+- Vertical scaling through additional CPU, memory, and storage
+- Horizontal scaling through distributed hypertables (future enhancement)
 - Efficient chunk management
 - Compression of historical data
+- Continuous Aggregate optimization
 
 ### MongoDB
 - Replica Sets for high availability
