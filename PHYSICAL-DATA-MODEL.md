@@ -66,17 +66,6 @@ Examples
 ---
 
 ## Database Objects
-
-| Object             | Convention           |
-|--------------------|----------------------|
-| Primary Key        | PK_<schema>_<table>  |
-| Foreign Key        | FK_<child>_<parent>  |
-| Unique Constraint  | UQ_<table>_<column>  |
-| Check Constraint   | CK_<table>_<column>  |
-| Default Constraint | DF_<table>_<column>  |
-| Index              | IX_<table>_<columns> |
----
-
 # Platform Responsibilities
 Each database platform owns a clearly defined business capability.
 
