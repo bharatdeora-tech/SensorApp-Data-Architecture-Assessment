@@ -111,11 +111,11 @@ WHERE sensor_type = 'TEMPERATURE'
 GROUP BY device_identifier;
 ```
 
-The query benefits from: instead of scanning the complete telemetry history.
+The query benefits from: 
 
 - Time-based chunk pruning
 - Parallel execution
-- Continuous aggregates (when available)
+- Continuous aggregates (when available) instead of scanning the complete telemetry history.
 ---
 
 ## MongoDB
