@@ -9,6 +9,7 @@ The modernized architecture introduces purpose-built data stores:
 | Device Management | SQL Server  |
 | Sensor Telemetry  | TimescaleDB |
 | Audit Logs        | MongoDB     |
+
 Each database is optimized for its workload, allowing independent scaling, improved query performance, and lower operational overhead.
 ---
 
